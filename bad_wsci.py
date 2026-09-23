@@ -1,30 +1,32 @@
-## This file is a bad way of managing context. 
+"""Baseline: pass every knowledge file to Qwen as context."""
 
+import os
 from pathlib import Path
-from ollama import chat
 
 
-question = """
-I changed my university password this morning.
-Now my Windows laptop won't connect to campus Wi-Fi,
-but my phone still works.
-"""
-
-
-context = ""
-
-for file in Path("knowledge").glob("*.txt"):
-    context += file.read_text()
-    context += "\n\n"
-
-## Make a call to Qwen with student's question and the context from the knowledge base.
-
-
-
-## Just for fun, print the total length of the context
-print(
-    "Context characters:",
-    len(context)
+question = (
+    "I changed my university password this morning. Now my Windows laptop "
+    "won't connect to campus Wi-Fi, but my phone still works."
 )
 
-## Print the response from Qwen
+
+def main():
+    from ollama import chat
+
+    knowledge = Path(__file__).parent / "knowledge"
+    context = ""
+    for file in sorted(knowledge.glob("*.txt")):
+        context += f"\n[{file.name}]\n{file.read_text(encoding='utf-8')}\n"
+    response = chat(
+        model=os.environ.get("OLLAMA_MODEL", "qwen3:8b"),
+        messages=[
+            {"role": "system", "content": "Answer using only the provided university knowledge."},
+            {"role": "user", "content": f"Knowledge:\n{context}\nQuestion:\n{question}"},
+        ],
+    )
+    print("Context characters:", len(context))
+    print(response.message.content)
+
+
+if __name__ == "__main__":
+    main()
